@@ -2,12 +2,20 @@ import numpy as np
 from typing import Callable
 
 
-def mesh_function(f: Callable[[np.ndarray], np.ndarray], t: np.ndarray):
-    pass
+def mesh_function(f: Callable[[float], float], t: np.ndarray) -> np.ndarray:
+    u = np.zeros(t.shape)
+    for i, ti in enumerate(t):
+        u[i] = f(ti)
+    return u
 
 
-def func(t: np.ndarray):
-    pass
+def func(t: float) -> float:
+    if 0 <= t <= 3:
+        return np.exp(-t)
+    elif 3 < t <= 4:
+        return np.exp(-3 * t)
+    else:
+        raise ValueError("t must be in [0, 4]")
 
 
 def test_mesh_function() -> None:
