@@ -1,15 +1,15 @@
 import numpy as np
 
 
-def differentiate(u, dt):
+def differentiate(u: np.ndarray, dt: float) -> np.ndarray:
     pass
 
 
-def differentiate_vector(u, dt):
+def differentiate_vector(u: np.ndarray, dt: float) -> np.ndarray:
     pass
 
 
-def test_differentiate():
+def test_differentiate() -> None:
     t = np.linspace(0, 1, 10)
     dt = t[1] - t[0]
     u = t**2
