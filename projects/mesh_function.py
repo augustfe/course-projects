@@ -4,8 +4,10 @@ import numpy as np
 def mesh_function(f, t):
     pass
 
+
 def func(t):
     pass
+
 
 def test_mesh_function():
     t = np.array([1, 2, 3, 4])

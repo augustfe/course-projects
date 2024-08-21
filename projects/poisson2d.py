@@ -5,7 +5,8 @@ import scipy.sparse as sparse
 from sympy.utilities.lambdify import implemented_function
 from poisson import Poisson
 
-x, y = sp.symbols('x,y')
+x, y = sp.symbols("x,y")
+
 
 class Poisson2D:
     r"""Solve Poisson's equation in 2D::
@@ -16,7 +17,7 @@ class Poisson2D:
     """
 
     def __init__(self, Lx, Ly, Nx, Ny):
-        self.px = Poisson(Lx, Nx) # we can reuse some of the code from the 1D case
+        self.px = Poisson(Lx, Nx)  # we can reuse some of the code from the 1D case
         self.py = Poisson(Ly, Ny)
 
     def create_mesh(self):
@@ -44,7 +45,7 @@ class Poisson2D:
         """
         raise NotImplementedError
 
-    def __call__(self, f=implemented_function('f', lambda x, y: 2)(x, y)):
+    def __call__(self, f=implemented_function("f", lambda x, y: 2)(x, y)):
         """Solve Poisson's equation with a given righ hand side function
 
         Parameters
@@ -60,8 +61,10 @@ class Poisson2D:
 
         """
         A, b = self.assemble(f=f)
-        return sparse.linalg.spsolve(A, b.ravel()).reshape((self.px.N+1, self.py.N+1))
+        return sparse.linalg.spsolve(A, b.ravel()).reshape(
+            (self.px.N + 1, self.py.N + 1)
+        )
+
 
 def test_poisson2d():
     assert False
-
