@@ -1,7 +1,11 @@
 import jax.numpy as jnp
 import pytest
 
-from ..polynomials import lagrange_polynomial
+from ..polynomials import (
+    all_chebyshev_polynomials,
+    chebyshev_nodes,
+    lagrange_polynomial,
+)
 
 
 @pytest.mark.parametrize(
@@ -39,3 +43,20 @@ def test_lagrange_polynomials_sum_to_one(nodes: list[int]) -> None:
     sum_P = jnp.sum(jnp.array([p(x) for p in P]), axis=0)
 
     assert jnp.allclose(sum_P, 1.0, atol=1e-4)
+
+
+@pytest.mark.parametrize("num_nodes", [3, 4, 5, 6])
+def test_chebyshev_nodes_in_range(num_nodes: int) -> None:
+    """Test that the Chebyshev nodes are in the interval [-1, 1]."""
+    nodes = chebyshev_nodes(-1, 1, num_nodes)
+    assert jnp.all(nodes >= -1) and jnp.all(nodes <= 1)
+
+
+@pytest.mark.parametrize("max_nodes", [10])
+def test_chebyshev_nodes_are_roots(max_nodes: int) -> None:
+    """Test that the Chebyshev nodes are zeros."""
+    polynomials = all_chebyshev_polynomials(max_nodes)
+
+    for i, t in enumerate(polynomials[1:], start=1):
+        nodes = chebyshev_nodes(-1, 1, i)
+        assert jnp.allclose(t(nodes), 0.0, atol=1e-4)

@@ -26,7 +26,5 @@ jobs:
         python-version-file: "pyproject.toml"
 
     - name: Test with pytest
-      run: |
-        cd projects
-        uv run pytest
+      run: uv run pytest
 
