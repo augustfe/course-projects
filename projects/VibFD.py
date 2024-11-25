@@ -191,12 +191,11 @@ class VibFD3(VibSolver):
     def __call__(self) -> np.ndarray:
         b = np.zeros(self.Nt + 1)
         b[0] = self.I
-        b[-1] = self.I
 
         g = 2 - self.dt**2 * self.w**2
         A = diags([1, -g, 1], [-1, 0, 1], (self.Nt + 1, self.Nt + 1), "lil")
         A[0, :3] = [1, 0, 0]
-        A[-1, -3:] = [0, 1, 0]
+        A[-1, -3:] = [1, -4, 3]
         A = A.tocsr()
 
         u = spsolve(A, b)
@@ -214,8 +213,30 @@ class VibFD4(VibFD2):
 
     order = 4
 
+    def __init__(self, Nt: int, T: float, w: float = 0.35, I: float = 1.0) -> None:
+        VibSolver.__init__(self, Nt, T, w, I)
+        T = T * w / np.pi
+        assert T.is_integer() and T % 2 == 0
+
     def __call__(self) -> np.ndarray:
-        u = np.zeros(self.Nt + 1)
+        b = np.zeros(self.Nt + 1)
+        b[0] = self.I
+        b[-1] = self.I
+
+        g = 12 * self.dt**2 * self.w**2
+        A = diags(
+            [-1, 16, -30 + g, 16, -1],
+            [-2, -1, 0, 1, 2],
+            (self.Nt + 1, self.Nt + 1),
+            "lil",
+        )
+        A[0, :4] = [1, 0, 0, 0]
+        A[1, :6] = [10, -15 + g, -4, 14, -6, 1]
+        A[-1, -4:] = [0, 0, 0, 1]
+        A[-2, -6:] = [1, -6, 14, -4, -15 + g, 10]
+
+        A = A.tocsr()
+        u = spsolve(A, b)
         return u
 
 
@@ -224,7 +245,7 @@ def test_order() -> None:
     VibHPL(8, 2 * np.pi / w, w).test_order()
     VibFD2(8, 2 * np.pi / w, w).test_order()
     VibFD3(8, 2 * np.pi / w, w).test_order()
-    # VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
+    VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
 
 
 if __name__ == "__main__":

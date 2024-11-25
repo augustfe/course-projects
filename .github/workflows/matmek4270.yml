@@ -11,20 +11,22 @@ permissions:
 
 jobs:
   build:
-
+    name: python
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 3.10
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest numpy matplotlib
+        python-version-file: "pyproject.toml"
+
     - name: Test with pytest
       run: |
         cd projects
-        pytest decay_v3.py mesh_function.py differentiate.py VibFB.py
+        uv run pytest decay_v3.py mesh_function.py differentiate.py VibFD.py
+
