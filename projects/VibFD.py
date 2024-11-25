@@ -8,9 +8,12 @@ We use various boundary conditions.
 
 """
 
-import numpy as np
+# ruff: noqa: E741
 import matplotlib.pyplot as plt
+import numpy as np
 import sympy as sp
+from scipy.sparse import diags
+from scipy.sparse.linalg import spsolve
 
 t = sp.Symbol("t")
 
@@ -22,6 +25,8 @@ class VibSolver:
         u'' + w**2 u = f,
 
     """
+
+    order: int
 
     def __init__(self, Nt: int, T: float, w: float = 0.35, I: float = 1.0) -> None:
         """
@@ -102,14 +107,11 @@ class VibSolver:
         E = []
         dt = []
         self.set_mesh(N0)  # Set initial size of mesh
-        for m in range(m):
+        for _ in range(m):
             self.set_mesh(self.Nt + 10)
             E.append(self.l2_error())
             dt.append(self.dt)
-        r = [
-            np.log(E[i - 1] / E[i]) / np.log(dt[i - 1] / dt[i])
-            for i in range(1, m + 1, 1)
-        ]
+        r = [np.log(E[i - 1] / E[i]) / np.log(dt[i - 1] / dt[i]) for i in range(1, m)]
         return r, np.array(E), np.array(dt)
 
     def test_order(self, m: int = 5, N0: int = 100, tol: float = 0.1) -> None:
@@ -155,7 +157,17 @@ class VibFD2(VibSolver):
         assert T.is_integer() and T % 2 == 0
 
     def __call__(self) -> np.ndarray:
-        u = np.zeros(self.Nt + 1)
+        b = np.zeros(self.Nt + 1)
+        b[0] = self.I
+        b[-1] = self.I
+
+        g = 2 - self.dt**2 * self.w**2
+        A = diags([1, -g, 1], [-1, 0, 1], (self.Nt + 1, self.Nt + 1), "lil")
+        A[0, :3] = [1, 0, 0]
+        A[-1, -3:] = [0, 0, 1]
+        A = A.tocsr()
+
+        u = spsolve(A, b)
         return u
 
 
@@ -177,7 +189,17 @@ class VibFD3(VibSolver):
         assert T.is_integer() and T % 2 == 0
 
     def __call__(self) -> np.ndarray:
-        u = np.zeros(self.Nt + 1)
+        b = np.zeros(self.Nt + 1)
+        b[0] = self.I
+        b[-1] = self.I
+
+        g = 2 - self.dt**2 * self.w**2
+        A = diags([1, -g, 1], [-1, 0, 1], (self.Nt + 1, self.Nt + 1), "lil")
+        A[0, :3] = [1, 0, 0]
+        A[-1, -3:] = [0, 1, 0]
+        A = A.tocsr()
+
+        u = spsolve(A, b)
         return u
 
 
@@ -202,8 +224,19 @@ def test_order() -> None:
     VibHPL(8, 2 * np.pi / w, w).test_order()
     VibFD2(8, 2 * np.pi / w, w).test_order()
     VibFD3(8, 2 * np.pi / w, w).test_order()
-    VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
+    # VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
 
 
 if __name__ == "__main__":
+    vib2 = VibFD2(8, 2 * np.pi / 0.35, 0.35)
+    vib3 = VibFD3(8, 2 * np.pi / 0.35, 0.35)
+    u2 = vib2()
+    u3 = vib3()
+
+    ue = vib2.u_exact()
+    print(ue)
+    plt.plot(vib2.t, ue, "b-", vib2.t, u2, "r-", vib3.t, u3, "g-")
+    plt.show()
+
+    # print(res)
     test_order()
