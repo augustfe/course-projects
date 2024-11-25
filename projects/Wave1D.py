@@ -175,7 +175,6 @@ class Wave1D:
         return plotdata
 
     def plot_with_offset(self, data):
-        Nd = len(data)
         v = np.array(list(data.values()))
         t = np.array(list(data.keys()))
         dt = t[1] - t[0]
