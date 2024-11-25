@@ -44,12 +44,12 @@ class Wave1D:
         self.un = np.zeros(N + 1)
         self.unm1 = np.zeros(N + 1)
 
-    def D2(self, bc: int) -> sparse.dia_matrix:
+    def D2(self, bc: int | dict[str, int]) -> sparse.dia_matrix:
         """Return second order differentiation matrix
 
         Paramters
         ---------
-        bc : int
+        bc : int | dict
             Boundary condition
 
         Note
@@ -58,26 +58,35 @@ class Wave1D:
         """
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N + 1, self.N + 1), "lil")
 
-        match bc:
-            case 0:  # Dirichlet condition
+        if isinstance(bc, int):
+            bc = {"left": bc, "right": bc}
+
+        if bc["left"] == 3 or bc["right"] == 3:
+            # Set both boundaries to periodic if one is periodic
+            bc["left"] = bc["right"] = 3
+
+        match bc["left"]:
+            case 0:
                 D[0] = 0
-                D[-1] = 0
-            case 1:  # Neumann condition is baked into stencil
-                cond = [-2, 2]
-                D[0, :2] = cond
-                D[-1, -2:] = cond[::-1]
-            case 3:  # periodic (Note u[0] = u[-1])
+            case 1:
+                D[0, :2] = [-2, 2]
+            case 3:
                 D[0, -2] = 1
-                # D[-2, 0] = 1
+
+        match bc["right"]:
+            case 0:
+                D[-1] = 0
+            case 1:
+                D[-1, -2:] = [2, -2]
 
         return D
 
-    def apply_bcs(self, bc: int, u: np.ndarray | None = None) -> None:
+    def apply_bcs(self, bc: int | dict[str, int], u: np.ndarray | None = None) -> None:
         """Apply boundary conditions to solution vector
 
         Parameters
         ----------
-        bc : int
+        bc : int | dict
             Boundary condition in space
             - 0 Dirichlet
             - 1 Neumann
@@ -91,25 +100,39 @@ class Wave1D:
         if u is None:
             u = self.unp1
 
-        match bc:
+        if isinstance(bc, int):
+            bc = {"left": bc, "right": bc}
+
+        if bc["left"] == 3 or bc["right"] == 3:
+            # Set both boundaries to periodic if one is periodic
+            bc["left"] = bc["right"] = 3
+
+        def open_func(i: int, j: int, k: int) -> int:
+            u_i, u_j, u_k = self.un[i], self.unm1[j], self.un[k]
+            a_i = 2 * (1 - self.cfl) * u_i
+            a_j = (1 - self.cfl) / (1 + self.cfl) * u_j
+            a_k = 2 * self.cfl**2 / (1 + self.cfl) * u_k
+            return a_i + a_j + a_k
+
+        match bc["left"]:
             case 0:  # Dirichlet condition
                 u[0] = 0
-                u[-1] = 0
-            case 1:  # Neumann condition
+            case 2:
+                u[0] = open_func(0, 0, 1)
+            case 1 | 3:
                 pass
-            case 2:  # Open boundary
-                c = self.cfl
+            case _:
+                raise RuntimeError(f"Wrong bc = {bc}")
 
-                def open_f(i: np.ndarray, j: np.ndarray, k: np.ndarray) -> np.ndarray:
-                    a_i = 2 * (1 - c) * i
-                    a_j = (1 - c) / (1 + c) * j
-                    a_k = 2 * c**2 / (1 + c) * k
-                    return a_i + a_j + a_k
-
-                u[0] = open_f(self.un[0], self.unm1[0], self.un[1])
-                u[-1] = open_f(self.un[-1], self.unm1[-1], self.un[-2])
+        match bc["right"]:
+            case 0:
+                u[-1] = 0
+            case 2:
+                u[-1] = open_func(-1, -1, -2)
             case 3:
                 u[-1] = u[0]
+            case 1:
+                pass
             case _:
                 raise RuntimeError(f"Wrong bc = {bc}")
 
