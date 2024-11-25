@@ -1,7 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
 from scipy import sparse
-import matplotlib.pyplot as plt
 
 x, t, c, L = sp.symbols("x,t,c,L")
 
@@ -24,8 +24,15 @@ class Wave1D:
     """
 
     def __init__(
-        self, N, L0=1, c0=1, cfl=1, u0=sp.exp(-200 * (x - L / 2 + c * t) ** 2)
-    ):
+        self,
+        N: int,
+        L0: float = 1,
+        c0: float = 1,
+        cfl: float = 1,
+        u0: sp.Function | None = None,
+    ) -> None:
+        if u0 is None:
+            u0 = sp.exp(-200 * (x - L / 2 + c * t) ** 2)
         self.N = N
         self.L = L0
         self.c = c0
@@ -37,7 +44,7 @@ class Wave1D:
         self.un = np.zeros(N + 1)
         self.unm1 = np.zeros(N + 1)
 
-    def D2(self, bc):
+    def D2(self, bc: int) -> sparse.dia_matrix:
         """Return second order differentiation matrix
 
         Paramters
@@ -50,15 +57,22 @@ class Wave1D:
         The returned matrix is not divided by dx**2
         """
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N + 1, self.N + 1), "lil")
-        if bc == 1:  # Neumann condition is baked into stencil
-            raise NotImplementedError
 
-        elif bc == 3:  # periodic (Note u[0] = u[-1])
-            raise NotImplementedError
+        match bc:
+            case 0:  # Dirichlet condition
+                D[0] = 0
+                D[-1] = 0
+            case 1:  # Neumann condition is baked into stencil
+                cond = [-2, 2]
+                D[0, :2] = cond
+                D[-1, -2:] = cond[::-1]
+            case 3:  # periodic (Note u[0] = u[-1])
+                D[0, -2] = 1
+                # D[-2, 0] = 1
 
         return D
 
-    def apply_bcs(self, bc, u=None):
+    def apply_bcs(self, bc: int, u: np.ndarray | None = None) -> None:
         """Apply boundary conditions to solution vector
 
         Parameters
@@ -74,22 +88,30 @@ class Wave1D:
             If not provided, use self.unp1
 
         """
-        u = u if u is not None else self.unp1
-        if bc == 0:  # Dirichlet condition
-            u[0] = 0
-            u[-1] = 0
+        if u is None:
+            u = self.unp1
 
-        elif bc == 1:  # Neumann condition
-            pass
+        match bc:
+            case 0:  # Dirichlet condition
+                u[0] = 0
+                u[-1] = 0
+            case 1:  # Neumann condition
+                pass
+            case 2:  # Open boundary
+                c = self.cfl
 
-        elif bc == 2:  # Open boundary
-            raise NotImplementedError
+                def open_f(i: np.ndarray, j: np.ndarray, k: np.ndarray) -> np.ndarray:
+                    a_i = 2 * (1 - c) * i
+                    a_j = (1 - c) / (1 + c) * j
+                    a_k = 2 * c**2 / (1 + c) * k
+                    return a_i + a_j + a_k
 
-        elif bc == 3:
-            raise NotImplementedError
-
-        else:
-            raise RuntimeError(f"Wrong bc = {bc}")
+                u[0] = open_f(self.un[0], self.unm1[0], self.un[1])
+                u[-1] = open_f(self.un[-1], self.unm1[-1], self.un[-2])
+            case 3:
+                u[-1] = u[0]
+            case _:
+                raise RuntimeError(f"Wrong bc = {bc}")
 
     @property
     def dt(self):
@@ -137,13 +159,13 @@ class Wave1D:
             self.un[:] = u0(self.x)
 
         else:  # use u_t = 0 for un = u(x, dt)
-            self.un[:] = self.unm1 + 0.5 * C ** 2 * (D @ self.unm1)
+            self.un[:] = self.unm1 + 0.5 * C**2 * (D @ self.unm1)
             self.apply_bcs(bc, self.un)
         if save_step == 1:
             plotdata[1] = self.un.copy()
 
         for n in range(2, Nt + 1):
-            self.unp1[:] = 2 * self.un - self.unm1 + C ** 2 * (D @ self.un)
+            self.unp1[:] = 2 * self.un - self.unm1 + C**2 * (D @ self.un)
             self.apply_bcs(bc)
             self.unm1[:] = self.un
             self.un[:] = self.unp1

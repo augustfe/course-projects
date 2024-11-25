@@ -1,5 +1,6 @@
-import numpy as np
+# ruff: noqa: E741
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def solver(
@@ -40,7 +41,12 @@ def plot_numerical_and_exact(
     u_e = u_exact(t_e, I, a)
 
     plt.plot(
-        t, u, "r--o", t_e, u_e, "b-"  # red dashes w/circles
+        t,
+        u,
+        "r--o",
+        t_e,
+        u_e,
+        "b-",  # red dashes w/circles
     )  # blue line for exact sol.
     plt.legend(["numerical", "exact"])
     plt.xlabel("$t$")
@@ -59,7 +65,7 @@ def test_solver_three_steps() -> None:
     u_by_hand = np.array([I, 0.0298245614035, 0.00889504462912, 0.00265290804728])
 
     Nt = 3  # number of time steps
-    u, t = solver(I=I, a=a, T=Nt * dt, dt=dt, theta=theta)
+    u, _ = solver(I=I, a=a, T=Nt * dt, dt=dt, theta=theta)
 
     tol = 1e-12  # tolerance for comparing floats
     diff = abs(u - u_by_hand).max()
