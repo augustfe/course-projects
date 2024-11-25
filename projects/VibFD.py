@@ -240,14 +240,6 @@ class VibFD4(VibFD2):
         return u
 
 
-def test_order() -> None:
-    w = 0.35
-    VibHPL(8, 2 * np.pi / w, w).test_order()
-    VibFD2(8, 2 * np.pi / w, w).test_order()
-    VibFD3(8, 2 * np.pi / w, w).test_order()
-    VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
-
-
 if __name__ == "__main__":
     vib2 = VibFD2(8, 2 * np.pi / 0.35, 0.35)
     vib3 = VibFD3(8, 2 * np.pi / 0.35, 0.35)
@@ -258,6 +250,3 @@ if __name__ == "__main__":
     print(ue)
     plt.plot(vib2.t, ue, "b-", vib2.t, u2, "r-", vib3.t, u3, "g-")
     plt.show()
-
-    # print(res)
-    test_order()

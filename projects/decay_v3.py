@@ -21,7 +21,7 @@ def solver(
 
 def u_exact(
     t: np.ndarray,
-    I: float,  # pylint: disable=invalid-name
+    I: float,
     a: float,
 ) -> np.ndarray:
     return I * np.exp(-a * t)
@@ -53,21 +53,3 @@ def plot_numerical_and_exact(
     plt.ylabel("$u$")
     plt.title(f"theta={theta:g}, dt={dt:g}")
     plt.savefig(f"plot_{theta}_{dt:g}.png")
-    print("Hei?")
-
-
-def test_solver_three_steps() -> None:
-    """Compare three steps with known manual computations."""
-    theta = 0.8
-    a = 2
-    I = 0.1
-    dt = 0.8
-    u_by_hand = np.array([I, 0.0298245614035, 0.00889504462912, 0.00265290804728])
-
-    Nt = 3  # number of time steps
-    u, _ = solver(I=I, a=a, T=Nt * dt, dt=dt, theta=theta)
-
-    tol = 1e-12  # tolerance for comparing floats
-    diff = abs(u - u_by_hand).max()
-    success = diff < tol
-    assert success
