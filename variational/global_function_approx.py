@@ -1,16 +1,6 @@
-from collections.abc import Callable
-
 import jax.numpy as jnp
-from quadax import quadgk
 
 from .polynomials import lagrange_polynomial
-
-
-def inner(u: Callable, v: Callable, a: float, b: float) -> float:
-    """Return the inner product of u and v"""
-    y, _ = quadgk(lambda x: u(x) * v(x), [a, b])
-    return y
-
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
