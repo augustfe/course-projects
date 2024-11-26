@@ -2,7 +2,9 @@ import jax.numpy as jnp
 import pytest
 
 from ..polynomials import (
+    Polynomial,
     all_chebyshev_polynomials,
+    all_legendre_polynomials,
     chebyshev_nodes,
     lagrange_polynomial,
 )
@@ -60,3 +62,23 @@ def test_chebyshev_nodes_are_roots(max_nodes: int) -> None:
     for i, t in enumerate(polynomials[1:], start=1):
         nodes = chebyshev_nodes(-1, 1, i)
         assert jnp.allclose(t(nodes), 0.0, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "j, expected",
+    [
+        (0, lambda x: jnp.ones_like(x)),
+        (1, lambda x: x),
+        (2, lambda x: 0.5 * (3 * x**2 - 1)),
+        (3, lambda x: 0.5 * (5 * x**3 - 3 * x)),
+        (4, lambda x: 0.125 * (35 * x**4 - 30 * x**2 + 3)),
+    ],
+)
+def test_legendre_polynomials(j: int, expected: Polynomial) -> None:
+    """Test that the Legendre polynomials are correct."""
+
+    polynomials = all_legendre_polynomials(j)
+    polynomial = polynomials[j]
+    x = jnp.linspace(-1, 1, 100)
+
+    assert jnp.allclose(polynomial(x), expected(x), atol=1e-4)

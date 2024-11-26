@@ -1,10 +1,15 @@
 from collections.abc import Callable
+from typing import Protocol
 
 import jax.numpy as jnp
 from jax import Array, vmap
 
 
-def lagrange_polynomial(nodes: Array, i: int) -> Callable[[Array], Array]:
+class Polynomial(Protocol):
+    def __call__(self, x: Array) -> Array: ...
+
+
+def lagrange_polynomial(nodes: Array, i: int) -> Polynomial:
     """Generate the i-th Lagrange polynomial.
 
     Args:
@@ -24,7 +29,7 @@ def lagrange_polynomial(nodes: Array, i: int) -> Callable[[Array], Array]:
     return p
 
 
-def all_lagrange_polynomials(nodes: Array) -> list[Callable[[Array], Array]]:
+def all_lagrange_polynomials(nodes: Array) -> list[Polynomial]:
     """Generate all Lagrange polynomials for the given nodes.
 
     Args:
@@ -43,9 +48,7 @@ def chebyshev_nodes(a: float, b: float, N: int) -> Array:
     return 0.5 * (a + b) + 0.5 * (b - a) * jnp.cos((2 * k + 1) / (2 * N) * jnp.pi)
 
 
-def chebyshev_polynomial(
-    t: Callable[[Array], Array], t_prev: Callable[[Array], Array]
-) -> Callable[[Array], Array]:
+def chebyshev_polynomial(t: Polynomial, t_prev: Polynomial) -> Polynomial:
     """Generate the next Chebyshev polynomial.
 
     Args:
@@ -58,7 +61,7 @@ def chebyshev_polynomial(
     return lambda x: 2 * x * t(x) - t_prev(x)
 
 
-def all_chebyshev_polynomials(num_poly: int) -> list[Callable[[Array], Array]]:
+def all_chebyshev_polynomials(num_poly: int) -> list[Polynomial]:
     """Generate all Chebyshev polynomials for the given nodes.
 
     Args:
@@ -70,6 +73,29 @@ def all_chebyshev_polynomials(num_poly: int) -> list[Callable[[Array], Array]]:
     polynomials = [lambda x: jnp.ones_like(x), lambda x: x]
     for _ in range(2, num_poly):
         polynomials.append(chebyshev_polynomial(polynomials[-1], polynomials[-2]))
+
+    return polynomials
+
+
+def all_legendre_polynomials(num_poly: int) -> list[Polynomial]:
+    """Generate all Legendre polynomials for the given nodes.
+
+    Args:
+        nodes (Array): Array of nodes
+
+    Returns:
+        list[Callable]: List of Legendre polynomials
+    """
+    polynomials = [lambda x: jnp.ones_like(x), lambda x: x]
+
+    def next_legendre_polynomial(
+        p: Polynomial, p_prev: Polynomial, j: int
+    ) -> Polynomial:
+        return lambda x: ((2 * j + 1) * x * p(x) - j * p_prev(x)) / (j + 1)
+
+    for j in range(1, num_poly):
+        p, p_prev = polynomials[-1], polynomials[-2]
+        polynomials.append(next_legendre_polynomial(p, p_prev, j))
 
     return polynomials
 
