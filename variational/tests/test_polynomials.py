@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import pytest
 
 from ..polynomials import (
-    Polynomial,
+    ScalarFunc,
     all_chebyshev_polynomials,
     all_legendre_polynomials,
     chebyshev_nodes,
@@ -74,10 +74,10 @@ def test_chebyshev_nodes_are_roots(max_nodes: int) -> None:
         (4, lambda x: 0.125 * (35 * x**4 - 30 * x**2 + 3)),
     ],
 )
-def test_legendre_polynomials(j: int, expected: Polynomial) -> None:
+def test_legendre_polynomials(j: int, expected: ScalarFunc) -> None:
     """Test that the Legendre polynomials are correct."""
 
-    polynomials = all_legendre_polynomials(j)
+    polynomials = all_legendre_polynomials(j + 1)
     polynomial = polynomials[j]
     x = jnp.linspace(-1, 1, 100)
 

@@ -4,11 +4,11 @@ import jax.numpy as jnp
 from jax import Array, vmap
 
 
-class Polynomial(Protocol):
+class ScalarFunc(Protocol):
     def __call__(self, x: Array) -> Array: ...
 
 
-def lagrange_polynomial(nodes: Array, i: int) -> Polynomial:
+def lagrange_polynomial(nodes: Array, i: int) -> ScalarFunc:
     """Generate the i-th Lagrange polynomial.
 
     Args:
@@ -28,7 +28,7 @@ def lagrange_polynomial(nodes: Array, i: int) -> Polynomial:
     return p
 
 
-def all_lagrange_polynomials(nodes: Array) -> list[Polynomial]:
+def all_lagrange_polynomials(nodes: Array) -> list[ScalarFunc]:
     """Generate all Lagrange polynomials for the given nodes.
 
     Args:
@@ -47,20 +47,11 @@ def chebyshev_nodes(a: float, b: float, N: int) -> Array:
     return 0.5 * (a + b) + 0.5 * (b - a) * jnp.cos((2 * k + 1) / (2 * N) * jnp.pi)
 
 
-def chebyshev_polynomial(t: Polynomial, t_prev: Polynomial) -> Polynomial:
-    """Generate the next Chebyshev polynomial.
-
-    Args:
-        t (Callable): Current Chebyshev polynomial
-        t_prev (Callable): Previous Chebyshev polynomial
-
-    Returns:
-        Callable: Next Chebyshev polynomial
-    """
-    return lambda x: 2 * x * t(x) - t_prev(x)
+def chebyshev_polynomial(k: int) -> ScalarFunc:
+    return lambda x: jnp.cos(k * jnp.arccos(x))
 
 
-def all_chebyshev_polynomials(num_poly: int) -> list[Polynomial]:
+def all_chebyshev_polynomials(num_poly: int) -> list[ScalarFunc]:
     """Generate all Chebyshev polynomials for the given nodes.
 
     Args:
@@ -69,14 +60,12 @@ def all_chebyshev_polynomials(num_poly: int) -> list[Polynomial]:
     Returns:
         list[Callable]: List of Chebyshev polynomials
     """
-    polynomials = [lambda x: jnp.ones_like(x), lambda x: x]
-    for _ in range(2, num_poly):
-        polynomials.append(chebyshev_polynomial(polynomials[-1], polynomials[-2]))
+    polynomials = [chebyshev_polynomial(k) for k in range(num_poly)]
 
     return polynomials
 
 
-def all_legendre_polynomials(num_poly: int) -> list[Polynomial]:
+def all_legendre_polynomials(num_poly: int) -> list[ScalarFunc]:
     """Generate all Legendre polynomials for the given nodes.
 
     Args:
@@ -88,13 +77,13 @@ def all_legendre_polynomials(num_poly: int) -> list[Polynomial]:
     polynomials = [lambda x: jnp.ones_like(x), lambda x: x]
 
     def next_legendre_polynomial(
-        p: Polynomial, p_prev: Polynomial, j: int
-    ) -> Polynomial:
+        p: ScalarFunc, p_prev: ScalarFunc, j: int
+    ) -> ScalarFunc:
         return lambda x: ((2 * j + 1) * x * p(x) - j * p_prev(x)) / (j + 1)
 
-    for j in range(1, num_poly):
+    for j in range(2, num_poly):
         p, p_prev = polynomials[-1], polynomials[-2]
-        polynomials.append(next_legendre_polynomial(p, p_prev, j))
+        polynomials.append(next_legendre_polynomial(p, p_prev, j - 1))
 
     return polynomials
 
