@@ -1,7 +1,11 @@
 from typing import Protocol
 
+import jax
 import jax.numpy as jnp
+import sympy as sp
 from jax import Array, vmap
+
+jax.config.update("jax_enable_x64", True)
 
 
 class ScalarFunc(Protocol):
@@ -74,16 +78,19 @@ def all_legendre_polynomials(num_poly: int) -> list[ScalarFunc]:
     Returns:
         list[Callable]: List of Legendre polynomials
     """
-    polynomials = [lambda x: jnp.ones_like(x), lambda x: x]
+    x = sp.symbols("x")
+    polynomials = [1, x]
 
-    def next_legendre_polynomial(
-        p: ScalarFunc, p_prev: ScalarFunc, j: int
-    ) -> ScalarFunc:
-        return lambda x: ((2 * j + 1) * x * p(x) - j * p_prev(x)) / (j + 1)
+    for i in range(2, num_poly):
+        p_i = polynomials[-1]
+        p_i1 = polynomials[-2]
+        new_p = ((2 * i - 1) * x * p_i - (i - 1) * p_i1) / i
+        new_p = sp.simplify(new_p)
+        polynomials.append(new_p)
 
-    for j in range(2, num_poly):
-        p, p_prev = polynomials[-1], polynomials[-2]
-        polynomials.append(next_legendre_polynomial(p, p_prev, j - 1))
+    p0 = lambda x: jnp.ones_like(x)
+    ps = [sp.lambdify(x, p, "numpy") for p in polynomials[1:]]
+    polynomials = [p0] + ps
 
     return polynomials
 

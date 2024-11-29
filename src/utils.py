@@ -3,8 +3,9 @@ from typing import TypeAlias
 import jax.numpy as jnp
 from jax import Array, lax, vmap
 from quadax import quadgk
+from tqdm import tqdm, trange
 
-from .polynomials import ScalarFunc
+from polynomials import ScalarFunc
 
 Interval: TypeAlias = tuple[float, float]
 
@@ -51,6 +52,7 @@ def mass_matrix(
     basis_functions: list[ScalarFunc],
     reference: Interval,
     weight_func: ScalarFunc | None = None,
+    basis: str | None = None,
 ) -> Array:
     """Return the mass matrix
 
@@ -66,23 +68,56 @@ def mass_matrix(
     Array
         The mass matrix
     """
+    if isinstance(basis, str):
+        match basis.lower():
+            case "legendre":
+                idxs = jnp.arange(len(basis_functions))
+                elements = 2 / (2 * idxs + 1)
+                return jnp.diag(elements)
+            case "chebyshev":
+                elements = jnp.ones(len(basis_functions)).at[0].set(2) * jnp.pi / 2
+                return jnp.diag(elements)
+            case _:
+                raise ValueError(f"Unknown basis {basis}")
+
+    A, B = reference
+    n = len(basis_functions)
+
+    w = weight_func if weight_func else lambda x: 1
+    M = jnp.zeros((n, n))
+
+    total = n * (n + 1) // 2
+    pbar = tqdm(total=total, desc="Computing the mass matrix")
+
+    for i in range(n):
+        for j in range(i, n):
+            res = inner(basis_functions[i], basis_functions[j], A, B, w)
+            M = M.at[i, j].set(res)
+            M = M.at[j, i].set(res)
+            pbar.update(1)
+
+    return M
+
+
+def b_vector(
+    basis_functions: list[ScalarFunc],
+    target_func: ScalarFunc,
+    reference: Interval,
+    weight_func: ScalarFunc | None = None,
+) -> Array:
     A, B = reference
     idxs = jnp.arange(len(basis_functions))
 
-    weight_func = weight_func if weight_func else lambda x: 1
+    w = weight_func if weight_func else lambda x: 1
 
-    def matrix_element(i: int, j: int) -> float:
-        return inner(
-            lambda x: lax.switch(i, basis_functions, x),
-            lambda x: lax.switch(j, basis_functions, x),
-            A,
-            B,
-            weight_func,
-        )
+    def vec_element(i: int) -> float:
+        return inner(basis_functions[i], target_func, A, B, w)
 
-    compute_all = vmap(vmap(matrix_element, in_axes=(0, None)), in_axes=(None, 0))
+    b = jnp.zeros(len(basis_functions))
+    for i in trange(len(basis_functions)):
+        b = b.at[i].set(vec_element(i))
 
-    return compute_all(idxs, idxs)
+    return b
 
 
 if __name__ == "__main__":

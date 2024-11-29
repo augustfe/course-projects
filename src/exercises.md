@@ -14,3 +14,6 @@ where $J_0(x)$ is the [Bessel function]() of the first kind. The Bessel function
 Experiment using either Legendre polynomials or sines as basis functions for the Galerkin method and Lagrange polynomials for the collocation method. Use both exact and numerical integration for the Galerkin method. Measure the error as a function of $N$ by computing an $L^2$ error norm.
 
 The approximation of the Bessel function with Legendre polynomials is shown below for $N=(20, 40, 60)$. For $N=60$ there is no visible difference from the exact solution.
+
+## Lecture 9
+Experiment with the Chebyshev Galerkin method and approximate the same global functions that was considered with Legendre and collocation last week.
